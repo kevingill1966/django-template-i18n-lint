@@ -52,6 +52,7 @@ GOOD_STRINGS = re.compile(
 
          # An <option> value tag
         |<option[^<>]+?value="[^"]*?"
+        |<option[^<>]+?value='[^']*?"
 
          # Any html attribute that's not value or title
         |[a-z:-]+?(?<!alt)(?<!value)(?<!title)(?<!summary)='[^']*?'
@@ -110,7 +111,7 @@ GOOD_STRINGS = re.compile(
 LETTERS = re.compile("\w")
 
 
-def replace_strings(filename):
+def replace_strings(filename, options):
     full_text_lines = []
     for index, message in enumerate(GOOD_STRINGS.split(open(filename).read())):
         if index % 2 == 0 and re.search("\w", message):
@@ -134,10 +135,20 @@ def non_translated_text(template):
 
     offset = 0
 
+    # Remove tags with embedded quotes
+    matches = re.findall('{%[^}]*%}', template)
+    for m in matches:
+        if m.find('"') != -1:
+            template = template.replace(m, '')
+
     # Find the parts of the template that don't match this regex
     # taken from http://www.technomancy.org/python/strings-that-dont-match-regex/
     for index, match in enumerate(GOOD_STRINGS.split(template)):
         if index % 2 == 0:
+
+            # Some matches I don't want
+            if match.strip() in ['value=""', "value=''"]:
+                continue
 
             # Ignore it if it doesn't have letters
             if LETTERS.search(match):
@@ -180,7 +191,7 @@ def main():
 
     for filename in files:
         if options.replace:
-            replace_strings(filename)
+            replace_strings(filename, options)
         else:
             print_strings(filename)
 
